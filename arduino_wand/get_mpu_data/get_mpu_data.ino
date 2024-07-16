@@ -3,8 +3,8 @@
 
 MPU6050 mpu;
 
-// 定义HZ
-const int HZ = 100;
+// 定义每秒采样次数
+const int freq = 64;
 const int second = 1;
 
 // 重力分量
@@ -52,37 +52,37 @@ void setup() {
 
 void loop() {
 
-  kalman_update();
+  int reading = digitalRead(buttonPin); // 读取按钮引脚的电平状态
 
-  //  int reading = digitalRead(buttonPin); // 读取按钮引脚的电平状态
-  //
-  //  // 检查是否有按钮状态变化
-  //  if (reading != lastButtonState) {
-  //    lastDebounceTime = millis(); // 记录状态变化的时间
-  //  }
-  //
-  //  // 如果状态变化超过去抖动延时，认为是有效变化
-  //  if ((millis() - lastDebounceTime) > debounceDelay) {
-  //    // 如果按钮状态确实变化了
-  //    if (reading != buttonState) {
-  //      buttonState = reading;
-  //
-  //      // 只有在按钮从按下变为释放时，才改变LED状态
-  //      if (buttonState == HIGH) {
-  //        resetState();
-  //
-  //        for (int i = 0; i < HZ * second; i ++) {
-  //          kalman_update();
-  //        }
-  //      }
-  //    }
-  //  }
-  //
-  //  // 记录上一次按钮状态
-  //  lastButtonState = reading;
+  // 检查是否有按钮状态变化
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis(); // 记录状态变化的时间
+  }
+
+  // 如果状态变化超过去抖动延时，认为是有效变化
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // 如果按钮状态确实变化了
+    if (reading != buttonState) {
+      buttonState = reading;
+
+      // 只有在按钮从按下变为释放时，才改变LED状态
+      if (buttonState == HIGH) {
+        resetState();
+
+        for (int i = 0; i < HZ * second; i ++) {
+          kalman_update(i);
+        }
+
+        Serial.println("");
+      }
+    }
+  }
+
+  // 记录上一次按钮状态
+  lastButtonState = reading;
 }
 
-void kalman_update() {
+void kalman_update(int i) {
   // 计算微分时间
   unsigned long currentTime = millis();
   float dt = (currentTime - prevTime) / 1000.0; // 时间间隔（秒）
@@ -155,24 +155,22 @@ void kalman_update() {
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
   // 打印数据
-  Serial.print("roll_v: ");
-  Serial.print(roll_v);
-  Serial.print(",");
-  Serial.print("pitch_v: ");
-  Serial.print(pitch_v);
-  Serial.print(",");
-  Serial.print("yaw_v: ");
-  Serial.print(yaw_v);
-  Serial.print("Ox: ");
   Serial.print(Ox);
   Serial.print(",");
-  Serial.print("Oy: ");
   Serial.print(Oy);
   Serial.print(",");
-  Serial.print("Oz: ");
-  Serial.println(Oz);
+  Serial.print(Oz);
+  Serial.print(",");
+  Serial.print(roll_v);
+  Serial.print(",");
+  Serial.print(pitch_v);
+  Serial.print(",");
+  Serial.print(yaw_v);
+  if (i != freq * second - 1) {
+    Serial.print(",");
+  }
 
-  delay(1000 / HZ);
+  delay(1000 / freq);
 }
 
 void resetState() {

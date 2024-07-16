@@ -33,11 +33,11 @@ if __name__ == '__main__':
     test_y_pd = pd.read_csv('test_y.csv', header=None)
 
     train_x = tf.convert_to_tensor(train_x_pd.to_numpy(), dtype=tf.float32)
-    train_x = tf.reshape(train_x, [-1, 64, 6])
+    train_x = tf.reshape(train_x, [-1, 128, 6])
     train_y = tf.convert_to_tensor(train_y_pd.to_numpy(), dtype=tf.int32)
 
     test_x = tf.convert_to_tensor(test_x_pd.to_numpy(), dtype=tf.float32)
-    test_x = tf.reshape(test_x, [-1, 64, 6])
+    test_x = tf.reshape(test_x, [-1, 128, 6])
     test_y = tf.convert_to_tensor(test_y_pd.to_numpy(), dtype=tf.int32)
 
     train_data = tf.data.Dataset.from_tensor_slices((train_x, train_y))
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     test_data = test_data.repeat()
 
     # 设置数据集的形状
-    timesteps = 64
+    timesteps = 128
     input_dim = 6
     num_classes = 3
     lr = 1e-5

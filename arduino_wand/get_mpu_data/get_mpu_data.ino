@@ -5,7 +5,7 @@ MPU6050 mpu;
 
 // 定义每秒采样次数
 const int freq = 64;
-const int second = 1;
+const int second = 2;
 
 // 重力分量
 float gravity_x;
@@ -69,7 +69,7 @@ void loop() {
       if (buttonState == HIGH) {
         resetState();
 
-        for (int i = 0; i < HZ * second; i ++) {
+        for (int i = 0; i < freq * second; i ++) {
           kalman_update(i);
         }
 

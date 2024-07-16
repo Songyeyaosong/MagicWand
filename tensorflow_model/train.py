@@ -1,6 +1,8 @@
 import tensorflow as tf
 import pandas as pd
 
+# kernel_regularizer=tf.keras.regularizers.l2(weight_decay)
+
 class Model(tf.keras.Model):
     def __init__(self):
         super(Model, self).__init__()
@@ -9,10 +11,10 @@ class Model(tf.keras.Model):
         self.conv3 = tf.keras.layers.Conv2D(filters=32, kernel_size=(1,3), strides=(1,1), padding='same', activation='relu')
         self.flatten = tf.keras.layers.Flatten()
         self.fc1 = tf.keras.layers.Dense(32, activation='relu')
-        self.fc2 = tf.keras.layers.Dense(3, activation='softmax')
+        self.fc2 = tf.keras.layers.Dense(4, activation='softmax')
 
-    def call(self, inputs):
-        x = tf.transpose(inputs, perm=[0, 2, 1])  # Convert (batch, seq, channels) to (batch, channels, seq)
+    def call(self, x):
+        x = tf.transpose(x, perm=[0, 2, 1])  # Convert (batch, seq, channels) to (batch, channels, seq)
         x = tf.expand_dims(x, axis=2)
         x = self.conv1(x)
         x = self.conv2(x)
@@ -20,6 +22,7 @@ class Model(tf.keras.Model):
         x = self.flatten(x)
         x = self.fc1(x)
         x = self.fc2(x)
+
         return x
 
 if __name__ == '__main__':
@@ -38,10 +41,10 @@ if __name__ == '__main__':
     test_y = tf.convert_to_tensor(test_y_pd.to_numpy(), dtype=tf.int32)
 
     train_data = tf.data.Dataset.from_tensor_slices((train_x, train_y))
-    train_data = train_data.batch(5)
+    train_data = train_data.batch(4)
 
     test_data = tf.data.Dataset.from_tensor_slices((test_x, test_y))
-    test_data = test_data.batch(5)
+    test_data = test_data.batch(4)
 
     train_data = train_data.repeat()
     test_data = test_data.repeat()
@@ -51,6 +54,7 @@ if __name__ == '__main__':
     input_dim = 6
     num_classes = 3
     lr = 1e-5
+    weight_decay = 1e-4
 
     # 构建模型
     model = Model()
@@ -61,7 +65,7 @@ if __name__ == '__main__':
                 metrics=['accuracy'])
 
     # 训练模型
-    model.fit(train_data, epochs=1000, steps_per_epoch=6, validation_data=test_data, validation_steps=3)
+    model.fit(train_data, epochs=1000, steps_per_epoch=50, validation_data=test_data, validation_steps=25)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
 

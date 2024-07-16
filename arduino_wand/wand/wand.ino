@@ -15,7 +15,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* model_input = nullptr;
 
-const int num_classes = 3;
+const int num_classes = 4;
 
 constexpr int kTensorArenaSize = 50 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
@@ -23,22 +23,31 @@ uint8_t tensor_arena[kTensorArenaSize];
 
 MPU6050 mpu;
 
-float pitch;
-float roll;
+// 定义每秒采样次数
+const int freq = 64;
+const int second = 1;
 
+// 重力分量
 float gravity_x;
 float gravity_y;
 float gravity_z;
 
-// 互补滤波器系数
-const float alpha = 0.95;
+// 换算到x,y轴上的角速度
+float roll_v, pitch_v, yaw_v;
 
 // 上次更新时间
 unsigned long prevTime;
 
-//定义HZ
-const int HZ = 64;
-const int second = 1;
+// 三个状态，先验状态，观测状态，最优估计状态
+float gyro_roll, gyro_pitch;        //陀螺仪积分计算出的角度，先验状态
+float acc_roll, acc_pitch;          //加速度计观测出的角度，观测状态
+float k_roll, k_pitch;              //卡尔曼滤波后估计出最优角度，最优估计状态
+
+// 误差协方差矩阵P
+float e_P[2][2];         //误差协方差矩阵，这里的e_P既是先验估计的P，也是最后更新的P
+
+// 卡尔曼增益K
+float k_k[2][2];         //这里的卡尔曼增益矩阵K是一个2X2的方阵
 
 const int buttonPin = 4; // 定义按钮引脚
 const int ledPin = 12;
@@ -91,7 +100,7 @@ void setup() {
   pinMode(buttonPin, INPUT_PULLUP); // 将按钮引脚设置为输入模式，并启用内部上拉电阻
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
-  calibratePR();
+  resetState();
 }
 
 void loop() {
@@ -111,10 +120,10 @@ void loop() {
 
       // 只有在按钮从按下变为释放时，才改变LED状态
       if (buttonState == HIGH) {
-        calibratePR();
+        resetState();
 
-        for (int i = 0; i < HZ * second; i ++) {
-          writeData(i, model_input->data.f);
+        for (int i = 0; i < freq * second; i ++) {
+          get_kalman_mpu_data(i, model_input->data.f);
         }
 
         TfLiteStatus invoke_status = interpreter->Invoke();
@@ -132,7 +141,7 @@ void loop() {
   lastButtonState = reading;
 }
 
-void calibratePR() {
+void resetState() {
   // 读取加速度计数据
   int16_t ax, ay, az;
   mpu.getAcceleration(&ax, &ay, &az);
@@ -143,19 +152,31 @@ void calibratePR() {
   float Az = az / 16384.0;
 
   // 计算Pitch和Roll
-  pitch = -atan2(Ax, sqrt(Ay * Ay + Az * Az));
-  roll = atan2(Ay, Az);
+  k_pitch = -atan2(Ax, sqrt(Ay * Ay + Az * Az));
+  k_roll = atan2(Ay, Az);
+
+  // 误差协方差矩阵P
+  e_P[0][0] = 1;
+  e_P[0][1] = 0;
+  e_P[1][0] = 0;
+  e_P[1][1] = 1;
+
+  // 卡尔曼增益K
+  k_k[0][0] = 0;
+  k_k[0][0] = 0;
+  k_k[0][0] = 0;
+  k_k[0][0] = 0;
 
   prevTime = millis();
 }
 
-void writeData(int i, float* input) {
-  // 获取当前时间
+void get_kalman_mpu_data(int i, float* input) {
+  // 计算微分时间
   unsigned long currentTime = millis();
   float dt = (currentTime - prevTime) / 1000.0; // 时间间隔（秒）
   prevTime = currentTime;
 
-  // 读取加速度计和陀螺仪数据
+  // 获取角速度和加速度
   int16_t ax, ay, az, gx, gy, gz;
   mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
@@ -163,36 +184,72 @@ void writeData(int i, float* input) {
   float Ax = ax / 16384.0;
   float Ay = ay / 16384.0;
   float Az = az / 16384.0;
+  float Ox, Oy, Oz;
 
   // 转换陀螺仪数据为弧度/秒
   float Gx = gx / 131.0 / 180 * PI;
   float Gy = gy / 131.0 / 180 * PI;
   float Gz = gz / 131.0 / 180 * PI;
 
-  // 使用加速度计数据计算Pitch和Roll
-  float accelPitch = -atan2(Ax, sqrt(Ay * Ay + Az * Az));
-  float accelRoll = atan2(Ay, Az);
+  // step1:计算先验状态
+  // 计算roll, pitch, yaw轴上的角速度
+  roll_v = Gx + ((sin(k_pitch) * sin(k_roll)) / cos(k_pitch)) * Gy + ((sin(k_pitch) * cos(k_roll)) / cos(k_pitch)) * Gz; //roll轴的角速度
+  pitch_v = cos(k_roll) * Gy - sin(k_roll) * Gz; //pitch轴的角速度
+  yaw_v = (sin(k_roll) / cos(k_pitch)) * Gy + (cos(k_roll) / cos(k_pitch)) * Gz; //yaw轴的角速度
+  gyro_roll = k_roll + dt * roll_v; //先验roll角度
+  gyro_pitch = k_pitch + dt * pitch_v; //先验pitch角度
 
-  // 使用陀螺仪数据更新Pitch和Roll
-  pitch = alpha * (pitch + Gx * dt) + (1 - alpha) * accelPitch;
-  roll = alpha * (roll + Gy * dt) + (1 - alpha) * accelRoll;
+  // step2:计算先验误差协方差矩阵
+  e_P[0][0] = e_P[0][0] + 0.0025;//这里的Q矩阵是一个对角阵且对角元均为0.0025
+  e_P[0][1] = e_P[0][1] + 0;
+  e_P[1][0] = e_P[1][0] + 0;
+  e_P[1][1] = e_P[1][1] + 0.0025;
 
-  gravity_x = -sin(pitch);
-  gravity_y = sin(roll) * cos(pitch);
-  gravity_z = cos(roll) * cos(pitch);
+  // step3:更新卡尔曼增益
+  k_k[0][0] = e_P[0][0] / (e_P[0][0] + 0.3);
+  k_k[0][1] = 0;
+  k_k[1][0] = 0;
+  k_k[1][1] = e_P[1][1] / (e_P[1][1] + 0.3);
 
+  // step4:计算最优估计状态
+  // 观测状态
+  // roll角度
+  acc_roll = atan2(Ay, Az);
+  //pitch角度
+  acc_pitch = -atan2(Ax, sqrt(Ay * Ay + Az * Az));
+  // 最优估计状态
+  k_roll = gyro_roll + k_k[0][0] * (acc_roll - gyro_roll);
+  k_pitch = gyro_pitch + k_k[1][1] * (acc_pitch - gyro_pitch);
+
+  // step5:更新协方差矩阵
+  e_P[0][0] = (1 - k_k[0][0]) * e_P[0][0];
+  e_P[0][1] = 0;
+  e_P[1][0] = 0;
+  e_P[1][1] = (1 - k_k[1][1]) * e_P[1][1];
+
+  // 计算重力加速度方向
+  gravity_x = -sin(k_pitch);
+  gravity_y = sin(k_roll) * cos(k_pitch);
+  gravity_z = cos(k_roll) * cos(k_pitch);
+
+  // 重力消除
   Ax = Ax - gravity_x;
   Ay = Ay - gravity_y;
   Az = Az - gravity_z;
 
-  input[i * 6] = Ax;
-  input[i * 6 + 1] = Ay;
-  input[i * 6 + 2] = Az;
-  input[i * 6 + 3] = Gx;
-  input[i * 6 + 4] = Gy;
-  input[i * 6 + 5] = Gz;
+  // 得到全局空间坐标系中的相对加速度
+  Ox = cos(k_pitch) * Ax + sin(k_pitch) * sin(k_roll) * Ay + sin(k_pitch) * cos(k_roll) * Az;
+  Oy = cos(k_roll) * Ay - sin(k_roll) * Az;
+  Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
-  delay(1000 / HZ); // 短暂延迟，避免过高的循环频率
+  input[i * 6] = Ox;
+  input[i * 6 + 1] = Oy;
+  input[i * 6 + 2] = Oz;
+  input[i * 6 + 3] = roll_v;
+  input[i * 6 + 4] = pitch_v;
+  input[i * 6 + 5] = yaw_v;
+
+  delay(1000 / freq); // 短暂延迟，避免过高的循环频率
 }
 
 void processGesture(float* output) {
@@ -212,13 +269,25 @@ void processGesture(float* output) {
     digitalWrite(ledPin, HIGH);
     delay(500);
     digitalWrite(ledPin, LOW);
-  } else {
+  } else if (max_index == 2) {
     digitalWrite(ledPin, HIGH);
     delay(250);
     digitalWrite(ledPin, LOW);
     delay(250);
     digitalWrite(ledPin, HIGH);
     delay(250);
+    digitalWrite(ledPin, LOW);
+  } else {
+    digitalWrite(ledPin, HIGH);
+    delay(150);
+    digitalWrite(ledPin, LOW);
+    delay(150);
+    digitalWrite(ledPin, HIGH);
+    delay(150);
+    digitalWrite(ledPin, LOW);
+    delay(150);
+    digitalWrite(ledPin, HIGH);
+    delay(150);
     digitalWrite(ledPin, LOW);
   }
 }

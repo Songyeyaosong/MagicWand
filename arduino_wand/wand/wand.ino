@@ -241,9 +241,8 @@ void get_kalman_mpu_data(int i, float* input) {
   Oy = cos(k_roll) * Ay - sin(k_roll) * Az;
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
-  input[i * 3] = Ox;
-  input[i * 3 + 1] = Oy;
-  input[i * 3 + 2] = Oz;
+  input[i * 2] = Ox;
+  input[i * 2 + 1] = Oz;
 
   delay(1000 / freq); // 短暂延迟，避免过高的循环频率
 }

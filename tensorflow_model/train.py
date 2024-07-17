@@ -1,24 +1,42 @@
 import tensorflow as tf
 import pandas as pd
 
-# kernel_regularizer=tf.keras.regularizers.l2(weight_decay)
+# kernel_regularizer=tf.keras.regularizers.l2(1e-2)
+
+# class Model(tf.keras.Model):
+#     def __init__(self):
+#         super(Model, self).__init__()
+#         self.lstm1 = tf.keras.layers.LSTM(16, input_shape=(128, 6), return_sequences=True, kernel_regularizer=kernel_regularizer)
+#         self.lstm2 = tf.keras.layers.LSTM(32, kernel_regularizer=kernel_regularizer)
+#         self.fc1 = tf.keras.layers.Dense(32, activation='relu', kernel_regularizer=kernel_regularizer)
+#         self.fc2 = tf.keras.layers.Dense(4, activation='softmax', kernel_regularizer=kernel_regularizer)
+
+#     def call(self, x):
+
+#         x = self.lstm1(x)
+#         x = self.lstm2(x)
+#         x = self.fc1(x)
+#         x = self.fc2(x)
+
+#         return x
 
 class Model(tf.keras.Model):
     def __init__(self):
         super(Model, self).__init__()
         self.conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=(1,3), strides=(1,1), padding='same', activation='relu')
         self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=(1,3), strides=(1,1), padding='same', activation='relu')
-        self.conv3 = tf.keras.layers.Conv2D(filters=32, kernel_size=(1,3), strides=(1,1), padding='same', activation='relu')
+        # self.lstm = tf.keras.layers.LSTM(units=16, activation='relu', kernel_regularizer=kernel_regularizer)
         self.flatten = tf.keras.layers.Flatten()
-        self.fc1 = tf.keras.layers.Dense(32, activation='relu')
+        self.fc1 = tf.keras.layers.Dense(16, activation='relu')
         self.fc2 = tf.keras.layers.Dense(4, activation='softmax')
 
     def call(self, x):
-        x = tf.transpose(x, perm=[0, 2, 1])  # Convert (batch, seq, channels) to (batch, channels, seq)
+        x = tf.transpose(x, perm=[0, 2, 1])
         x = tf.expand_dims(x, axis=2)
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.conv3(x)
+        # x = tf.squeeze(x, axis=2)
+        # x = tf.transpose(x, perm=[0, 2, 1])
         x = self.flatten(x)
         x = self.fc1(x)
         x = self.fc2(x)
@@ -52,9 +70,9 @@ if __name__ == '__main__':
     # 设置数据集的形状
     timesteps = 128
     input_dim = 6
-    num_classes = 3
-    lr = 1e-5
-    weight_decay = 1e-4
+    num_classes = 4
+    lr = 1e-4
+    num_epochs = 200
 
     # 构建模型
     model = Model()
@@ -65,9 +83,13 @@ if __name__ == '__main__':
                 metrics=['accuracy'])
 
     # 训练模型
-    model.fit(train_data, epochs=1000, steps_per_epoch=50, validation_data=test_data, validation_steps=25)
+    model.fit(train_data, epochs=num_epochs, steps_per_epoch=50, validation_data=test_data, validation_steps=25)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.target_spec.supported_ops = [
+        tf.lite.OpsSet.TFLITE_BUILTINS,
+        tf.lite.OpsSet.SELECT_TF_OPS
+        ]
 
     # converter.optimizations = [tf.lite.Optimize.DEFAULT]
     # converter.target_spec.supported_types = [tf.float16]

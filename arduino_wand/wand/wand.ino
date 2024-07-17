@@ -33,7 +33,7 @@ float gravity_y;
 float gravity_z;
 
 // 换算到x,y轴上的角速度
-float roll_v, pitch_v, yaw_v;
+float roll_v, pitch_v;
 
 // 上次更新时间
 unsigned long prevTime;
@@ -195,7 +195,6 @@ void get_kalman_mpu_data(int i, float* input) {
   // 计算roll, pitch, yaw轴上的角速度
   roll_v = Gx + ((sin(k_pitch) * sin(k_roll)) / cos(k_pitch)) * Gy + ((sin(k_pitch) * cos(k_roll)) / cos(k_pitch)) * Gz; //roll轴的角速度
   pitch_v = cos(k_roll) * Gy - sin(k_roll) * Gz; //pitch轴的角速度
-  yaw_v = (sin(k_roll) / cos(k_pitch)) * Gy + (cos(k_roll) / cos(k_pitch)) * Gz; //yaw轴的角速度
   gyro_roll = k_roll + dt * roll_v; //先验roll角度
   gyro_pitch = k_pitch + dt * pitch_v; //先验pitch角度
 
@@ -242,12 +241,9 @@ void get_kalman_mpu_data(int i, float* input) {
   Oy = cos(k_roll) * Ay - sin(k_roll) * Az;
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
-  input[i * 6] = Ox;
-  input[i * 6 + 1] = Oy;
-  input[i * 6 + 2] = Oz;
-  input[i * 6 + 3] = roll_v;
-  input[i * 6 + 4] = pitch_v;
-  input[i * 6 + 5] = yaw_v;
+  input[i * 3] = Ox;
+  input[i * 3 + 1] = Oy;
+  input[i * 3 + 2] = Oz;
 
   delay(1000 / freq); // 短暂延迟，避免过高的循环频率
 }

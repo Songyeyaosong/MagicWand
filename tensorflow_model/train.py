@@ -6,7 +6,7 @@ import pandas as pd
 # class Model(tf.keras.Model):
 #     def __init__(self):
 #         super(Model, self).__init__()
-#         self.lstm1 = tf.keras.layers.LSTM(16, input_shape=(128, 6), return_sequences=True, kernel_regularizer=kernel_regularizer)
+#         self.lstm1 = tf.keras.layers.LSTM(16, input_shape=(128, 3), return_sequences=True, kernel_regularizer=kernel_regularizer)
 #         self.lstm2 = tf.keras.layers.LSTM(32, kernel_regularizer=kernel_regularizer)
 #         self.fc1 = tf.keras.layers.Dense(32, activation='relu', kernel_regularizer=kernel_regularizer)
 #         self.fc2 = tf.keras.layers.Dense(4, activation='softmax', kernel_regularizer=kernel_regularizer)
@@ -51,11 +51,11 @@ if __name__ == '__main__':
     test_y_pd = pd.read_csv('test_y.csv', header=None)
 
     train_x = tf.convert_to_tensor(train_x_pd.to_numpy(), dtype=tf.float32)
-    train_x = tf.reshape(train_x, [-1, 128, 6])
+    train_x = tf.reshape(train_x, [-1, 128, 3])
     train_y = tf.convert_to_tensor(train_y_pd.to_numpy(), dtype=tf.int32)
 
     test_x = tf.convert_to_tensor(test_x_pd.to_numpy(), dtype=tf.float32)
-    test_x = tf.reshape(test_x, [-1, 128, 6])
+    test_x = tf.reshape(test_x, [-1, 128, 3])
     test_y = tf.convert_to_tensor(test_y_pd.to_numpy(), dtype=tf.int32)
 
     train_data = tf.data.Dataset.from_tensor_slices((train_x, train_y))
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # 设置数据集的形状
     timesteps = 128
-    input_dim = 6
+    input_dim = 3
     num_classes = 4
     lr = 1e-4
     num_epochs = 200
@@ -86,10 +86,10 @@ if __name__ == '__main__':
     model.fit(train_data, epochs=num_epochs, steps_per_epoch=50, validation_data=test_data, validation_steps=25)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.target_spec.supported_ops = [
-        tf.lite.OpsSet.TFLITE_BUILTINS,
-        tf.lite.OpsSet.SELECT_TF_OPS
-        ]
+    # converter.target_spec.supported_ops = [
+    #     tf.lite.OpsSet.TFLITE_BUILTINS,
+    #     tf.lite.OpsSet.SELECT_TF_OPS
+    #     ]
 
     # converter.optimizations = [tf.lite.Optimize.DEFAULT]
     # converter.target_spec.supported_types = [tf.float16]

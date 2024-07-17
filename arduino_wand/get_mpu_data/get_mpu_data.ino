@@ -13,7 +13,7 @@ float gravity_y;
 float gravity_z;
 
 // 换算到x,y轴上的角速度
-float roll_v, pitch_v, yaw_v;
+float roll_v, pitch_v;
 
 // 上次更新时间
 unsigned long prevTime;
@@ -107,7 +107,6 @@ void kalman_update(int i) {
   // 计算x,y轴上的角速度
   roll_v = Gx + ((sin(k_pitch) * sin(k_roll)) / cos(k_pitch)) * Gy + ((sin(k_pitch) * cos(k_roll)) / cos(k_pitch)) * Gz; //roll轴的角速度
   pitch_v = cos(k_roll) * Gy - sin(k_roll) * Gz; //pitch轴的角速度
-  yaw_v = (sin(k_roll) / cos(k_pitch)) * Gy + (cos(k_roll) / cos(k_pitch)) * Gz; //yaw轴的角速度
   gyro_roll = k_roll + dt * roll_v; //先验roll角度
   gyro_pitch = k_pitch + dt * pitch_v; //先验pitch角度
 
@@ -160,12 +159,6 @@ void kalman_update(int i) {
   Serial.print(Oy);
   Serial.print(",");
   Serial.print(Oz);
-  Serial.print(",");
-  Serial.print(roll_v);
-  Serial.print(",");
-  Serial.print(pitch_v);
-  Serial.print(",");
-  Serial.print(yaw_v);
   if (i != freq * second - 1) {
     Serial.print(",");
   }

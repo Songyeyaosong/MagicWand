@@ -16,6 +16,7 @@ tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* model_input = nullptr;
 
 const int num_classes = 4;
+const int input_dim = 2;
 
 constexpr int kTensorArenaSize = 50 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
@@ -241,8 +242,8 @@ void get_kalman_mpu_data(int i, float* input) {
   Oy = cos(k_roll) * Ay - sin(k_roll) * Az;
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
-  input[i * 2] = Ox;
-  input[i * 2 + 1] = Oz;
+  input[i * input_dim] = Ox;
+  input[i * input_dim + 1] = Oz;
 
   delay(1000 / freq); // 短暂延迟，避免过高的循环频率
 }

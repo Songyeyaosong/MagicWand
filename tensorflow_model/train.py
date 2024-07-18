@@ -1,15 +1,24 @@
 import tensorflow as tf
 import pandas as pd
+import math
+
+# 设置数据集的形状
+timesteps = 128
+lr = 1e-4
+num_epochs = 200
+batch_size = 4
+input_dim = 2
+num_classes = 4
 
 # kernel_regularizer=tf.keras.regularizers.l2(1e-2)
 
 # class Model(tf.keras.Model):
 #     def __init__(self):
 #         super(Model, self).__init__()
-#         self.lstm1 = tf.keras.layers.LSTM(16, input_shape=(128, 2), return_sequences=True, kernel_regularizer=kernel_regularizer)
+#         self.lstm1 = tf.keras.layers.LSTM(16, input_shape=(128, input_dim), return_sequences=True, kernel_regularizer=kernel_regularizer)
 #         self.lstm2 = tf.keras.layers.LSTM(32, kernel_regularizer=kernel_regularizer)
 #         self.fc1 = tf.keras.layers.Dense(32, activation='relu', kernel_regularizer=kernel_regularizer)
-#         self.fc2 = tf.keras.layers.Dense(4, activation='softmax', kernel_regularizer=kernel_regularizer)
+#         self.fc2 = tf.keras.layers.Dense(num_classes, activation='softmax', kernel_regularizer=kernel_regularizer)
 
 #     def call(self, x):
 
@@ -28,7 +37,7 @@ class Model(tf.keras.Model):
         # self.lstm = tf.keras.layers.LSTM(units=16, activation='relu', kernel_regularizer=kernel_regularizer)
         self.flatten = tf.keras.layers.Flatten()
         self.fc1 = tf.keras.layers.Dense(16, activation='relu')
-        self.fc2 = tf.keras.layers.Dense(4, activation='softmax')
+        self.fc2 = tf.keras.layers.Dense(num_classes, activation='softmax')
 
     def call(self, x):
         x = tf.transpose(x, perm=[0, 2, 1])
@@ -51,28 +60,26 @@ if __name__ == '__main__':
     test_y_pd = pd.read_csv('test_y.csv', header=None)
 
     train_x = tf.convert_to_tensor(train_x_pd.to_numpy(), dtype=tf.float32)
-    train_x = tf.reshape(train_x, [-1, 128, 2])
+    train_x = tf.reshape(train_x, [-1, timesteps, input_dim])
     train_y = tf.convert_to_tensor(train_y_pd.to_numpy(), dtype=tf.int32)
 
     test_x = tf.convert_to_tensor(test_x_pd.to_numpy(), dtype=tf.float32)
-    test_x = tf.reshape(test_x, [-1, 128, 2])
+    test_x = tf.reshape(test_x, [-1, timesteps, input_dim])
     test_y = tf.convert_to_tensor(test_y_pd.to_numpy(), dtype=tf.int32)
 
     train_data = tf.data.Dataset.from_tensor_slices((train_x, train_y))
-    train_data = train_data.batch(4)
+    train_data = train_data.batch(batch_size)
 
     test_data = tf.data.Dataset.from_tensor_slices((test_x, test_y))
-    test_data = test_data.batch(4)
+    test_data = test_data.batch(batch_size)
+
+    train_size = tf.data.experimental.cardinality(train_data).numpy()
+    test_size = tf.data.experimental.cardinality(test_data).numpy()
+    steps_per_epoch = math.ceil(train_size / batch_size)
+    validation_steps = math.ceil(test_size / batch_size)
 
     train_data = train_data.repeat()
     test_data = test_data.repeat()
-
-    # 设置数据集的形状
-    timesteps = 128
-    input_dim = 2
-    num_classes = 4
-    lr = 1e-4
-    num_epochs = 200
 
     # 构建模型
     model = Model()
@@ -83,7 +90,7 @@ if __name__ == '__main__':
                 metrics=['accuracy'])
 
     # 训练模型
-    model.fit(train_data, epochs=num_epochs, steps_per_epoch=50, validation_data=test_data, validation_steps=25)
+    model.fit(train_data, epochs=num_epochs, steps_per_epoch=steps_per_epoch, validation_data=test_data, validation_steps=validation_steps)
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     # converter.target_spec.supported_ops = [

@@ -156,7 +156,7 @@ void kalman_update(int i) {
   // 打印数据
   Serial.print(Ox);
   Serial.print(",");
-  Serial.print(Oy);
+  Serial.print(Oz);
   if (i != freq * second - 1) {
     Serial.print(",");
   }

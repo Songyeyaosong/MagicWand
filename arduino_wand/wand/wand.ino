@@ -51,12 +51,19 @@ float e_P[2][2];         //误差协方差矩阵，这里的e_P既是先验估�
 float k_k[2][2];         //这里的卡尔曼增益矩阵K是一个2X2的方阵
 
 const int buttonPin = 4; // 定义按钮引脚
-const int ledPin = 12;
-int buttonState;          // 当前按钮状态
-int lastButtonState = HIGH; // 上一次按钮状态
+const int ledPin = 12; // 定义led引脚
 
-unsigned long lastDebounceTime = 0; // 上一次去抖动时间
+volatile bool buttonPressed = false;
+volatile unsigned long lastInterruptTime = 0; // 上一次中断时间
 unsigned long debounceDelay = 10;   // 去抖动延时
+
+void button_pressed() {
+  unsigned long currentTime = millis();
+  if ((currentTime - lastInterruptTime) > debounceDelay) {
+    buttonPressed = true;
+    lastInterruptTime = currentTime;
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -99,47 +106,30 @@ void setup() {
   }
 
   pinMode(buttonPin, INPUT_PULLUP); // 将按钮引脚设置为输入模式，并启用内部上拉电阻
+  attachInterrupt(digitalPinToInterrupt(buttonPin), button_pressed, RISING); // 设置中断
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
-  resetState();
 }
 
 void loop() {
 
-  int reading = digitalRead(buttonPin); // 读取按钮引脚的电平状态
+  if (buttonPressed == true) {
+    resetState();
 
-  // 检查是否有按钮状态变化
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis(); // 记录状态变化的时间
-  }
-
-  // 如果状态变化超过去抖动延时，认为是有效变化
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // 如果按钮状态确实变化了
-    if (reading != buttonState) {
-      buttonState = reading;
-
-      // 只有在按钮从按下变为释放时，才改变LED状态
-      if (buttonState == HIGH) {
-        resetState();
-
-        for (int i = 0; i < freq * second; i ++) {
-          get_kalman_mpu_data(i, model_input->data.f);
-        }
-
-        TfLiteStatus invoke_status = interpreter->Invoke();
-        if (invoke_status != kTfLiteOk) {
-          error_reporter->Report("Invoke failed");
-          return;
-        }
-
-        processGesture(interpreter->output(0)->data.f);
-      }
+    for (int i = 0; i < freq * second; i ++) {
+      get_kalman_mpu_data(i, model_input->data.f);
     }
+
+    TfLiteStatus invoke_status = interpreter->Invoke();
+    if (invoke_status != kTfLiteOk) {
+      error_reporter->Report("Invoke failed");
+      return;
+    }
+
+    processGesture(interpreter->output(0)->data.f);
+    buttonPressed = false;
   }
 
-  // 记录上一次按钮状态
-  lastButtonState = reading;
 }
 
 void resetState() {

@@ -15,7 +15,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* model_input = nullptr;
 
-const int num_classes = 4;
+const int num_classes = 3;
 const int input_dim = 2;
 
 constexpr int kTensorArenaSize = 50 * 1024;
@@ -250,20 +250,18 @@ void processGesture(float* output) {
   }
 
   if (max_index == 0) {
-    digitalWrite(ledPin, LOW);
-  } else if (max_index == 1) {
     digitalWrite(ledPin, HIGH);
     delay(500);
     digitalWrite(ledPin, LOW);
+  } else if (max_index == 1) {
+    digitalWrite(ledPin, HIGH);
+    delay(250);
+    digitalWrite(ledPin, LOW);
+    delay(250);
+    digitalWrite(ledPin, HIGH);
+    delay(250);
+    digitalWrite(ledPin, LOW);
   } else if (max_index == 2) {
-    digitalWrite(ledPin, HIGH);
-    delay(250);
-    digitalWrite(ledPin, LOW);
-    delay(250);
-    digitalWrite(ledPin, HIGH);
-    delay(250);
-    digitalWrite(ledPin, LOW);
-  } else {
     digitalWrite(ledPin, HIGH);
     delay(150);
     digitalWrite(ledPin, LOW);

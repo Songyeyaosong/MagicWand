@@ -8,7 +8,7 @@ lr = 1e-4
 num_epochs = 200
 batch_size = 4
 input_dim = 2
-num_classes = 4
+num_classes = 3
 
 # kernel_regularizer=tf.keras.regularizers.l2(1e-2)
 

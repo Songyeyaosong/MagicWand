@@ -5,7 +5,7 @@ MPU6050 mpu;
 
 // 定义每秒采样次数
 const int freq = 64;
-const int second = 2;
+const int timesteps = 96;
 
 // 重力分量
 float gravity_x;
@@ -62,7 +62,7 @@ void loop() {
   if (buttonPressed == true) {
     resetState();
 
-    for (int i = 0; i < freq * second; i ++) {
+    for (int i = 0; i < timesteps; i ++) {
       kalman_update(i);
     }
 
@@ -144,10 +144,10 @@ void kalman_update(int i) {
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
   // 打印数据
-  Serial.print(Ox);
+  Serial.print(Ox * 9.8);
   Serial.print(",");
-  Serial.print(Oz);
-  if (i != freq * second - 1) {
+  Serial.print(Oz * 9.8);
+  if (i != timesteps - 1) {
     Serial.print(",");
   }
 

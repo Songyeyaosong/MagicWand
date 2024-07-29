@@ -1,13 +1,16 @@
 import serial
 import pandas as pd
 
+gesture = ['Right_Angle', 'Sharp_Angle', 'Lignitning', 'Triangle', 'Letter_H', 'Letter_R',
+           'Letter_W', 'Letter_Phi', 'Circle', 'Up_And_Down', 'Horn', 'Wave']
+
 # 配置串口参数
 port = 'COM3'  # 替换为你的ESP32连接的串口号
 baud_rate = 115200  # 替换为你的ESP32的波特率
 
-data_x = 'data_x.csv'
-data_y = 'data_y.csv'
-label = [1]
+data_x = 'test_x.csv'
+data_y = 'test_y.csv'
+label = [11]
 
 try:
     # 打开串口

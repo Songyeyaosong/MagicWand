@@ -15,7 +15,7 @@ const tflite::Model* model = nullptr;
 tflite::MicroInterpreter* interpreter = nullptr;
 TfLiteTensor* model_input = nullptr;
 
-const int num_classes = 3;
+const int num_classes = 12;
 const int input_dim = 2;
 
 constexpr int kTensorArenaSize = 50 * 1024;
@@ -26,7 +26,7 @@ MPU6050 mpu;
 
 // 定义每秒采样次数
 const int freq = 64;
-const int second = 2;
+const int timesteps = 96;
 
 // 重力分量
 float gravity_x;
@@ -116,7 +116,7 @@ void loop() {
   if (buttonPressed == true) {
     resetState();
 
-    for (int i = 0; i < freq * second; i ++) {
+    for (int i = 0; i < timesteps; i ++) {
       get_kalman_mpu_data(i, model_input->data.f);
     }
 
@@ -232,8 +232,8 @@ void get_kalman_mpu_data(int i, float* input) {
   Oy = cos(k_roll) * Ay - sin(k_roll) * Az;
   Oz = -sin(k_pitch) * Ax + cos(k_pitch) * sin(k_roll) * Ay + cos(k_pitch) * cos(k_roll) * Az;
 
-  input[i * input_dim] = Ox;
-  input[i * input_dim + 1] = Oz;
+  input[i * input_dim] = Ox * 9.8;
+  input[i * input_dim + 1] = Oz * 9.8;
 
   delay(1000 / freq); // 短暂延迟，避免过高的循环频率
 }
@@ -249,29 +249,21 @@ void processGesture(float* output) {
     }
   }
 
-  if (max_index == 0) {
-    digitalWrite(ledPin, HIGH);
-    delay(500);
-    digitalWrite(ledPin, LOW);
-  } else if (max_index == 1) {
-    digitalWrite(ledPin, HIGH);
-    delay(250);
-    digitalWrite(ledPin, LOW);
-    delay(250);
-    digitalWrite(ledPin, HIGH);
-    delay(250);
-    digitalWrite(ledPin, LOW);
-  } else if (max_index == 2) {
-    digitalWrite(ledPin, HIGH);
-    delay(150);
-    digitalWrite(ledPin, LOW);
-    delay(150);
-    digitalWrite(ledPin, HIGH);
-    delay(150);
-    digitalWrite(ledPin, LOW);
-    delay(150);
-    digitalWrite(ledPin, HIGH);
-    delay(150);
-    digitalWrite(ledPin, LOW);
+  Serial.print(max_value); Serial.print(", ");
+
+  switch (max_index){
+    case 0:Serial.println("Right_Angle");
+    case 1:Serial.println("Sharp_Angle");
+    case 2:Serial.println("Lignitning");
+    case 3:Serial.println("Triangle");
+    case 4:Serial.println("Letter_H");
+    case 5:Serial.println("Letter_R");
+    case 6:Serial.println("Letter_W");
+    case 7:Serial.println("Letter_Phi");
+    case 8:Serial.println("Circle");
+    case 9:Serial.println("Up_And_Down");
+    case 10:Serial.println("Horn");
+    case 11:Serial.println("Wave");
   }
+  
 }

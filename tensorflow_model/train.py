@@ -3,12 +3,12 @@ import pandas as pd
 import math
 
 # 设置数据集的形状
-timesteps = 128
+timesteps = 96
 lr = 1e-4
 num_epochs = 1000
 batch_size = 4
 input_dim = 2
-num_classes = 3
+num_classes = 12
 
 # kernel_regularizer=tf.keras.regularizers.l2(1e-2)
 

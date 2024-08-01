@@ -252,18 +252,19 @@ void processGesture(float* output) {
   Serial.print(max_value); Serial.print(", ");
 
   switch (max_index){
-    case 0:Serial.println("Right_Angle");
-    case 1:Serial.println("Sharp_Angle");
-    case 2:Serial.println("Lignitning");
-    case 3:Serial.println("Triangle");
-    case 4:Serial.println("Letter_H");
-    case 5:Serial.println("Letter_R");
-    case 6:Serial.println("Letter_W");
-    case 7:Serial.println("Letter_Phi");
-    case 8:Serial.println("Circle");
-    case 9:Serial.println("Up_And_Down");
-    case 10:Serial.println("Horn");
-    case 11:Serial.println("Wave");
+    case 0:Serial.println("Right_Angle"); break;
+    case 1:Serial.println("Sharp_Angle"); break;
+    case 2:Serial.println("Lignitning"); break;
+    case 3:Serial.println("Triangle"); break;
+    case 4:Serial.println("Letter_H"); break;
+    case 5:Serial.println("Letter_R"); break;
+    case 6:Serial.println("Letter_W"); break;
+    case 7:Serial.println("Letter_Phi"); break;
+    case 8:Serial.println("Circle"); break;
+    case 9:Serial.println("Up_And_Down"); break;
+    case 10:Serial.println("Horn"); break;
+    case 11:Serial.println("Wave"); break;
+    default: Serial.println("Unknown"); break;
   }
   
 }
